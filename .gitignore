@@ -1,0 +1,4 @@
+*.csv
+json_loader/data/*
+*.pyc
+*.sql

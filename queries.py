@@ -168,7 +168,18 @@ def Q_1(cursor, conn, execution_time):
     #==========================================================================
     # Enter QUERY within the quotes:
 
-    query = """ """
+    query = """ 
+            SELECT p.name, AVG(s.xg) as avg_xg
+            FROM players p
+            JOIN events e ON p.id = e.player_id
+            JOIN shots s ON e.id = s.event_id
+            JOIN matches m ON e.match_id = m.match_id
+            JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+            WHERE c.competition_name = 'La Liga' AND c.season_name = '2020/2021' AND s.xg > 0
+            GROUP BY p.name
+            HAVING COUNT(s.event_id) > 0
+            ORDER BY avg_xg DESC;
+            """
 
     #==========================================================================
 
@@ -206,7 +217,20 @@ def Q_3(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
     
-    query = """ """
+    query = """ 
+            SELECT p.name, COUNT(s.event_id) AS first_time_shots
+            FROM players p
+            JOIN events e ON p.id = e.player_id
+            JOIN shots s ON e.id = s.event_id
+            JOIN matches m ON e.match_id = m.match_id
+            JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+            WHERE c.competition_name = 'La Liga' 
+            AND c.season_name IN ('2020/2021', '2019/2020', '2018/2019')
+            AND s.first_time = TRUE
+            GROUP BY p.name
+            HAVING COUNT(s.event_id) >= 1
+            ORDER BY first_time_shots DESC;
+            """
 
     #==========================================================================
 
@@ -242,7 +266,19 @@ def Q_5(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
     
-    query = """ """
+    query = """ 
+            SELECT p.name, COUNT(pass.recipient_id) AS num_passes_received
+            FROM players p
+            JOIN passes pass ON p.id = pass.recipient_id
+            JOIN events e ON pass.event_id = e.id
+            JOIN matches m ON e.match_id = m.match_id
+            JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+            WHERE c.competition_name = 'Premier League' 
+            AND c.season_name = '2003/2004'
+            GROUP BY p.name
+            HAVING COUNT(pass.recipient_id) >= 1
+            ORDER BY num_passes_received DESC;
+            """
 
     #==========================================================================
 
@@ -278,7 +314,20 @@ def Q_7(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
     
-    query = """ """
+    query = """ 
+            SELECT p.name, COUNT(pass.event_id) AS through_balls
+            FROM players p
+            JOIN passes pass ON p.id = pass.recipient_id
+            JOIN events e ON pass.event_id = e.id
+            JOIN matches m ON e.match_id = m.match_id
+            JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+            WHERE c.competition_name = 'La Liga' 
+            AND c.season_name = '2020/2021'
+            AND pass.through_ball = TRUE
+            GROUP BY p.name
+            HAVING COUNT(pass.event_id) >= 1
+            ORDER BY through_balls DESC;
+            """
 
     #==========================================================================
 
@@ -314,7 +363,20 @@ def Q_9(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
     
-    query = """ """
+    query = """ 
+            SELECT p.name, COUNT(d.event_id) AS successful_dribbles
+            FROM players p
+            JOIN events e ON p.id = e.player_id
+            JOIN dribbles d ON e.id = d.event_id
+            JOIN matches m ON e.match_id = m.match_id
+            JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+            WHERE c.competition_name = 'La Liga' 
+            AND c.season_name IN ('2020/2021', '2019/2020', '2018/2019')
+            AND d.outcome_name = 'Complete'
+            GROUP BY p.name
+            HAVING COUNT(d.event_id) >= 1
+            ORDER BY successful_dribbles DESC;
+            """
 
     #==========================================================================
 
