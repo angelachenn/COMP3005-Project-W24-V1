@@ -198,7 +198,19 @@ def Q_2(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
 
-    query = """ """
+    query = """
+            SELECT p.name, COUNT(s.event_id) AS total_shots
+            FROM players p
+            JOIN events e ON p.id = e.player_id
+            JOIN shots s ON e.id = s.event_id
+            JOIN matches m ON e.match_id = m.match_id
+            JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+            WHERE c.competition_name = 'La Liga' 
+            AND c.season_name = '2020/2021'
+            GROUP BY p.name
+            HAVING COUNT(s.event_id) >= 1
+            ORDER BY total_shots DESC;
+            """
 
     #==========================================================================
 
@@ -248,7 +260,20 @@ def Q_4(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
     
-    query = """ """
+    query = """
+            SELECT t.team_name, COUNT(pass.event_id) AS passes_made
+            FROM teams t
+            JOIN events e ON t.team_id = e.team_id
+            JOIN passes pass ON pass.event_id = e.id
+            JOIN matches m ON e.match_id = m.match_id
+            JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+            WHERE c.competition_name = 'La Liga' 
+            AND c.season_name = '2020/2021'
+            AND p.outcome_id = NULL
+            GROUP BY t.team_name
+            HAVING COUNT(pass.event_id) >= 1
+            ORDER BY passes_made DESC;
+            """
 
     #==========================================================================
 
@@ -296,7 +321,19 @@ def Q_6(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
     
-    query = """ """
+    query = """
+            SELECT t.team_name, COUNT(shot.event_id) AS shots_made
+            FROM teams t
+            JOIN events e ON t.team_id = e.team_id
+            JOIN shots shot ON shot.event_id = e.id
+            JOIN matches m ON e.match_id = m.match_id
+            JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+            WHERE c.competition_name = 'Premier League' 
+            AND c.season_name = '2003/2004'
+            GROUP BY t.team_name
+            HAVING COUNT(shot.event_id) >= 1
+            ORDER BY shots_made DESC;
+            """
 
     #==========================================================================
 
@@ -345,7 +382,20 @@ def Q_8(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
     
-    query = """ """
+    query = """
+            SELECT t.team_name, COUNT(pass.event_id) AS through_balls
+            FROM teams t
+            JOIN events e ON t.team_id = e.team_id
+            JOIN passes pass ON pass.event_id = e.id
+            JOIN matches m ON e.match_id = m.match_id
+            JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+            WHERE c.competition_name = 'La Liga' 
+            AND c.season_name = '2020/2021'
+            AND pass.through_ball = TRUE
+            GROUP BY t.team_name
+            HAVING COUNT(pass.event_id) >= 1
+            ORDER BY through_balls DESC;
+            """
 
     #==========================================================================
 
@@ -394,7 +444,8 @@ def Q_10(cursor, conn, execution_time):
     #==========================================================================    
     # Enter QUERY within the quotes:
     
-    query = """ """
+    query = """
+            """
 
     #==========================================================================
 
