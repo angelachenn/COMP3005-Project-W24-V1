@@ -25,6 +25,21 @@ class DB:
   def insert_shot(self, val): self.__insert(val, "shots")
   def insert_interception(self, val): self.__insert(val, "interceptions")
   def insert_dribble(self, val): self.__insert(val, "dribbles")
+  def insert_half_start(self, val): self.__insert(val, "half_starts")
+  def insert_carry(self, val): self.__insert(val, "carries")
+  def insert_ball_recovery(self, val): self.__insert(val, "ball_recoveries")
+  def insert_block(self, val): self.__insert(val, "blocks")
+  def insert_miscontrol(self, val): self.__insert(val, "miscontrols")
+  def insert_foul_comitted(self, val): self.__insert(val, "fouls_committed")
+  def insert_foul_won(self, val): self.__insert(val, "fouls_won")
+  def insert_duel(self, val): self.__insert(val, "duels")
+  def insert_clearance(self, val): self.__insert(val, "clearances")
+  def insert_injury_stoppage(self, val): self.__insert(val, "injury_stoppages")
+  def insert_bad_behavior(self, val): self.__insert(val, "bad_behaviors")
+  def insert_substitution(self, val): self.__insert(val, "substitutions")
+  def insert_ball_receipt(self, val): self.__insert(val, "ball_receipts")
+  def insert_fifty_fifty(self, val): self.__insert(val, "fifty_fifties")
+  def insert_goalkeeper(self, val): self.__insert(val, "goalkeepers")
   
   def get_matches(self):
     self.cur.execute('SELECT match_id FROM matches;')
@@ -46,6 +61,20 @@ class DB:
     )
 
   def __drop_tables(self):
+    self.cur.execute(f"DROP TABLE IF EXISTS substitutions;")
+    self.cur.execute(f"DROP TABLE IF EXISTS bad_behaviors;")
+    self.cur.execute(f"DROP TABLE IF EXISTS injury_stoppages;")
+    self.cur.execute(f"DROP TABLE IF EXISTS clearances;")
+    self.cur.execute(f"DROP TABLE IF EXISTS duels;")
+    self.cur.execute(f"DROP TABLE IF EXISTS fouls_won;")
+    self.cur.execute(f"DROP TABLE IF EXISTS fouls_committed;")
+    self.cur.execute(f"DROP TABLE IF EXISTS foul_wons;")
+    self.cur.execute(f"DROP TABLE IF EXISTS foul_committeds;")
+    self.cur.execute(f"DROP TABLE IF EXISTS miscontrols;")
+    self.cur.execute(f"DROP TABLE IF EXISTS blocks;")
+    self.cur.execute(f"DROP TABLE IF EXISTS ball_recoveries;")
+    self.cur.execute(f"DROP TABLE IF EXISTS carries;")
+    self.cur.execute(f"DROP TABLE IF EXISTS half_starts;")
     self.cur.execute(f"DROP TABLE IF EXISTS dribbles;")
     self.cur.execute(f"DROP TABLE IF EXISTS interceptions;")
     self.cur.execute(f"DROP TABLE IF EXISTS shots;")
@@ -159,8 +188,9 @@ class DB:
       duration FLOAT,
       under_pressure BOOL,
       off_camera BOOL,
+      counterpress BOOL,
       out BOOL,
-      type_metadata TEXT,
+      tactics TEXT,
       possession_team_id SMALLINT NOT NULL,
       team_id SMALLINT NOT NULL,
       player_id INT,
@@ -254,6 +284,124 @@ class DB:
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS half_starts (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      late_video_start BOOL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS carries (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      end_location TEXT NOT NULL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS ball_recoveries (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      offensive BOOL,
+      recovery_failure BOOL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS blocks (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      deflection BOOL,
+      save_block BOOL,
+      offensive BOOL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS miscontrols (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      aerial_won BOOL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS fouls_committed (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      card TEXT NOT NULL,
+      type TEXT NOT NULL,
+      penalty BOOL,
+      advantage BOOL,
+      offensive BOOL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS fouls_won (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      penalty BOOL,
+      advantage BOOL,
+      defensive BOOL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS duels (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      outcome TEXT NOT NULL,
+      type TEXT NOT NULL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS clearances (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      body_part TEXT NOT NULL,
+      aerial_won BOOL,
+      left_foot BOOL,
+      right_foot BOOL,
+      head BOOL,
+      other BOOL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS injury_stoppages (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      in_chain BOOL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS bad_behaviors (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      card TEXT NOT NULL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS substitutions (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      replacement_id INT NOT NULL,
+      outcome TEXT NOT NULL,
+      FOREIGN KEY (replacement_id) REFERENCES players(id),
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS ball_receipts (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      outcome TEXT NOT NULL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS fifty_fifties (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      outcome TEXT NOT NULL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS goalkeepers (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      outcome TEXT NOT NULL,
+      shot_saved_off_target BOOL,
+      position TEXT,
+      body_part TEXT,
+      shot_saved_to_post BOOL,
+      technique TEXT,
+      lost_out BOOL,
+      lost_in_play BOOL,
+      success_in_play BOOL,
+      type TEXT,
+      end_location TEXT,
+      punched_out BOOL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+    
     self.conn.commit()
     
   def __optimize_tables(self):
@@ -265,7 +413,7 @@ class DB:
       CREATE INDEX idx_team_id_lineups ON lineups(team_id);
 
       CREATE INDEX idx_event_id_tactics ON tactics(event_id);
-                                                   
+
       CREATE INDEX idx_competition ON matches(competition_id, season_id);
       CREATE INDEX idx_home_team_id ON matches(home_team_id);
       CREATE INDEX idx_away_team_id ON matches(away_team_id);
@@ -282,9 +430,7 @@ class DB:
       CREATE INDEX idx_event_id_passes ON passes(event_id);
 
       CREATE INDEX idx_event_id_interceptions ON interceptions(event_id);
-
       CREATE INDEX idx_event_id_dribbles ON dribbles(event_id);
-
       CREATE INDEX idx_event_id_shots ON shots(event_id);
       """)
     

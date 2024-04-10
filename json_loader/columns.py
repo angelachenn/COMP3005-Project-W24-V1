@@ -57,8 +57,9 @@ COLS = {
     "duration",
     "under_pressure",
     "off_camera",
+    "counterpress",
     "out",
-    "type_metadata",
+    "tactics",
     "possession_team_id",
     "team_id",
     "player_id",
@@ -137,5 +138,54 @@ COLS = {
     "overrun",
     "nutmeg",
     "no_touch"
+  ],
+  "half_starts": ["late_video_start"],
+  "carries": ["end_location"],
+  "ball_recoveries": ["recovery_failure", "offensive"],
+  "blocks": [
+    "deflection",
+    "save_block",
+    "offensive"
+  ],
+  "miscontrols": ["aerial_won"],
+  "fouls_committed": [
+    "card", 
+    "type", 
+    "penalty",
+    "advantage",
+    "offensive"
+  ],
+  "fouls_won": [
+    "penalty",
+    "advantage",
+    "defensive"
+  ],
+  "duels": ["outcome", "type"],
+  "clearances": [
+    "left_foot",
+    "body_part",
+    "aerial_won",
+    "head",
+    "right_foot",
+    "other"
+  ],
+  "injury_stoppages": ["in_chain"],
+  "bad_behaviors": ["card"],
+  "substitutions": ["replacement", "outcome"],
+  "ball_receipts": ["outcome"],
+  "fifty_fifties": ["outcome"],
+  "goalkeepers": [
+    "outcome",
+    "shot_saved_off_target",
+    "position",
+    "body_part",
+    "shot_saved_to_post",
+    "technique",
+    "lost_out",
+    "lost_in_play",
+    "success_in_play",
+    "type",
+    "end_location",
+    "punched_out"
   ]
 }

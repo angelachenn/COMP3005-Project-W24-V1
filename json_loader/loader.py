@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 from db import DB
 
@@ -85,7 +86,7 @@ class Loader:
           self.db.insert_player(event["player"])
           
         event["match_id"] = match[0]
-        event = self.__parse_event(event)
+        event, type = self.__parse_event(event)
         self.db.insert_event(event)
         
         if "tactics" in event:
@@ -93,35 +94,61 @@ class Loader:
           tactic["event_id"] = event["id"]
           self.db.insert_tactic(tactic)
 
+        event_type = event.get(type, {})
+        event_type["event_id"] = event["id"] 
+        
         match (event["type"]["name"]):
           case "Pass":
-            pass_type = event["pass"]
-            pass_type["event_id"] = event["id"]
-            
-            if "recipient" in pass_type:
-              self.db.insert_player(pass_type["recipient"])
-            
-            pass_type = self.__parse_pass(pass_type)
-            self.db.insert_pass(pass_type)
+            if "recipient" in event_type:
+              self.db.insert_player(event_type["recipient"])
+            self.db.insert_pass(self.__parse_pass(event_type))
             
           case "Shot":
-            shot_type = event["shot"]
-            shot_type["event_id"] = event["id"]
-            shot_type = self.__parse_shot(shot_type)
-            self.db.insert_shot(shot_type)
+            self.db.insert_shot(self.__parse_shot(event_type))
             
           case "Interception":
-            interception_type = event["interception"]
-            interception_type["event_id"] = event["id"]
-            interception_type["outcome_id"], interception_type["outcome_name"] = tuple(interception_type["outcome"].values())
-            self.db.insert_interception(interception_type)
+            event_type["outcome_id"], event_type["outcome_name"] = tuple(event_type["outcome"].values())
+            self.db.insert_interception(event_type)
             
           case "Dribble":
-            dribble_type = event["dribble"]
-            dribble_type["event_id"] = event["id"]
-            dribble_type["outcome_id"], dribble_type["outcome_name"] = tuple(dribble_type["outcome"].values())
-            self.db.insert_dribble(dribble_type)
+            event_type["outcome_id"], event_type["outcome_name"] = tuple(event_type["outcome"].values())
+            self.db.insert_dribble(event_type)
+          
+          case "Half Start":
+            self.db.insert_half_start(event_type)
             
+          case "Carry":
+            event_type["end_location"] = str(event_type["end_location"])
+            self.db.insert_carry(event_type)
+            
+          case "Ball Recovery":
+            self.db.insert_ball_recovery(event_type)
+            
+          case "Block":
+            self.db.insert_block(event_type)
+            
+          case "Miscontrol":
+            pass 
+          case "Foul Committed":
+            pass
+          case "Foul Won":
+            pass
+          case "Duel":
+            pass
+          case "Clearance":
+            pass
+          case "Injury Stoppage":
+            pass
+          case "Bad Behavior":
+            pass
+          case "Substitution":
+            pass
+          case "Ball Receipt*":
+            pass
+          case "50/50":
+            pass
+          case "Goal Keeper":
+            pass
           case _:
             pass
   
@@ -150,12 +177,18 @@ class Loader:
     event["team_id"] = event.get("team", {}).get("id")
     event["location_x"], event["location_y"] = event.get("location", [None, None])[:2]
     event_type = event.get("type", {}).get("name")
-    type = "goalkeeper" if event_type == "Goalkeeper" else event_type.replace(" ", "_").lower()
+    type = event_type.replace(" ", "_").lower()
     
-    if event["type"]["name"] not in ["Shot", "Pass", "Dribble", "Interception"]:
-      event["type_metadata"] = str(event.get(type) or "")
+    atypical_types = {
+      "Ball Receipt*": "ball_receipt",
+      "Goal Keeper": "goalkeeper",
+      "50/50": "50_50",
+    }
     
-    return event
+    if event_type and event_type in atypical_types:
+      type = atypical_types[event_type]
+    
+    return event, type
   
   def __parse_pass(self, pass_type):
     pass_type["recipient_id"] = pass_type.get("recipient", {}).get("id")
