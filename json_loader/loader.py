@@ -10,7 +10,7 @@ class Loader:
       (2, 44) #("Premier League", "2003/2004")
     ]
   
-  # The IDs of La Liga and Premier Leage
+  # The IDs of La Liga and Premier League
   COMPETITION_IDS = [11, 2]
     
   def __init__(self, cur, conn, data_path):
@@ -24,6 +24,8 @@ class Loader:
     print("Successfully loaded competitions.")
     self.__load_matches()
     print("Successfully loaded matches.")
+    self.__load_lineups()
+    print("Successfully loaded lineups.")
     self.__load_events()
     print("Successfully loaded events.")
 
@@ -40,14 +42,37 @@ class Loader:
       matches = json.loads(open(f"{self.data_path}/matches/{comp_id}/{season_id}.json").read())
       
       for match in matches:
-        self.db.insert_team({k.removeprefix("home_"): v for k, v in match["home_team"].items()})
-        self.db.insert_team({k.removeprefix("away_"): v for k, v in match["away_team"].items()})
+        try:
+          home_team_manager = match["home_team"]["managers"][0]
+          away_team_manager = match["away_team"]["managers"][0]
+          self.db.insert_manager(home_team_manager)
+          self.db.insert_manager(away_team_manager)
+        except KeyError:
+          continue
+
+        home_team = {k.removeprefix("home_"): v for k, v in match["home_team"].items()}
+        away_team = {k.removeprefix("away_"): v for k, v in match["away_team"].items()}
         
+        home_team = self.__parse_team(home_team, home_team_manager["id"])
+        self.db.insert_team(home_team)
+        away_team = self.__parse_team(away_team, away_team_manager["id"])
+        self.db.insert_team(away_team)
+
         match.update(match["home_team"])
         match.update(match["away_team"])
-        match["competition_id"], match["season_id"] = competition
 
+        match["competition_id"], match["season_id"] = competition
         self.db.insert_match(match)
+
+  def __load_lineups(self):
+    matches = self.db.get_matches()
+    
+    for match in matches:
+      lineups = json.loads(open(f"{self.data_path}/lineups/{match[0]}.json").read())
+      
+      for lineup in lineups:
+        lineup["match_id"] = match[0]
+        self.db.insert_lineup(lineup)
 
   def __load_events(self):
     matches = self.db.get_matches()
@@ -63,6 +88,11 @@ class Loader:
         event = self.__parse_event(event)
         self.db.insert_event(event)
         
+        if "tactics" in event:
+          tactic = event["tactics"]
+          tactic["event_id"] = event["id"]
+          self.db.insert_tactic(tactic)
+
         match (event["type"]["name"]):
           case "Pass":
             pass_type = event["pass"]
@@ -94,13 +124,28 @@ class Loader:
             
           case _:
             pass
-
+  
+  def __parse_team(self, team, manager_id):
+    team.pop("managers")
+    team["manager_id"] = manager_id
+    return team
+  
   def __parse_event(self, event):
     event["player_id"] = event.get("player", {}).get("id")
-    event["type_id"], event["type_name"] = tuple(
-      event.get("type", {}).get(key) 
-      for key in ("id", "name")
-    )
+
+    type = event.get("type")
+    event["type_id"] = type["id"]
+    self.db.insert_types(type)
+
+    play_pattern = event.get("play_pattern")
+    event["play_pattern_id"] = play_pattern["id"]
+    self.db.insert_play_patterns(play_pattern)
+
+    if "position" in event:
+      position = event.get("position")
+      event["position_id"] = position["id"]
+      self.db.insert_positions(position)
+
     event["possession_team_id"] = event.get("possession_team", {}).get("id")
     event["team_id"] = event.get("team", {}).get("id")
     event["location_x"], event["location_y"] = event.get("location", [None, None])[:2]

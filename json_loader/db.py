@@ -11,10 +11,16 @@ class DB:
     self.__optimize_tables()
     
   def insert_competition(self, val): self.__insert(val, "competitions")
+  def insert_manager(self, val): self.__insert(val, "managers", True, "id")
   def insert_team(self, val): self.__insert(val, "teams", True, "team_id")
   def insert_player(self, val): self.__insert(val, "players", True, "id")
   def insert_match(self, val): self.__insert(val, "matches")
+  def insert_lineup(self, val): self.__insert(val, "lineups")
   def insert_event(self, val): self.__insert(val, "events")
+  def insert_types(self, val): self.__insert(val, "types", True, "id")
+  def insert_positions(self, val): self.__insert(val, "positions", True, "id")
+  def insert_play_patterns(self, val): self.__insert(val, "play_patterns", True, "id")
+  def insert_tactic(self, val): self.__insert(val, "tactics")
   def insert_pass(self, val): self.__insert(val, "passes")
   def insert_shot(self, val): self.__insert(val, "shots")
   def insert_interception(self, val): self.__insert(val, "interceptions")
@@ -44,10 +50,16 @@ class DB:
     self.cur.execute(f"DROP TABLE IF EXISTS interceptions;")
     self.cur.execute(f"DROP TABLE IF EXISTS shots;")
     self.cur.execute(f"DROP TABLE IF EXISTS passes;")
+    self.cur.execute(f"DROP TABLE IF EXISTS tactics;")
+    self.cur.execute(f"DROP TABLE IF EXISTS lineups;")
     self.cur.execute(f"DROP TABLE IF EXISTS events;")
+    self.cur.execute(f"DROP TABLE IF EXISTS types;")
+    self.cur.execute(f"DROP TABLE IF EXISTS play_patterns;")
+    self.cur.execute(f"DROP TABLE IF EXISTS positions;")
     self.cur.execute(f"DROP TABLE IF EXISTS matches;")
     self.cur.execute(f"DROP TABLE IF EXISTS competitions;")
     self.cur.execute(f"DROP TABLE IF EXISTS teams;")
+    self.cur.execute(f"DROP TABLE IF EXISTS managers;")
     self.cur.execute(f"DROP TABLE IF EXISTS players;")
     self.conn.commit() 
 
@@ -64,14 +76,23 @@ class DB:
       PRIMARY KEY (competition_id, season_id));"""
     )
     
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS managers (
+      id SMALLINT NOT NULL PRIMARY KEY,
+      name TEXT NOT NULL,
+      nickname TEXT,
+      dob DATE,
+      country TEXT NOT NULL);"""
+    )
+
     self.cur.execute("""CREATE TABLE IF NOT EXISTS teams (
       team_id SMALLINT NOT NULL PRIMARY KEY,
       team_name TEXT NOT NULL,
       team_gender TEXT NOT NULL,
       team_group TEXT,
       country TEXT NOT NULL,
-      managers TEXT);"""
-    )
+      manager_id SMALLINT,
+      FOREIGN KEY (manager_id) REFERENCES managers(id));"""
+    )             
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS matches (
       match_id INT NOT NULL PRIMARY KEY,
@@ -92,11 +113,35 @@ class DB:
       FOREIGN KEY (home_team_id) REFERENCES teams(team_id),
       FOREIGN KEY (away_team_id) REFERENCES teams(team_id));"""
     )
-    
+
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS lineups (
+      match_id INT NOT NULL,
+      team_id SMALLINT NOT NULL,
+      lineup TEXT NOT NULL,
+      PRIMARY KEY (match_id, team_id),
+      FOREIGN KEY (match_id) REFERENCES matches(match_id),
+      FOREIGN KEY (team_id) REFERENCES teams(team_id));"""
+    )
+
     self.cur.execute("""CREATE TABLE IF NOT EXISTS players (
       id INT NOT NULL PRIMARY KEY,
       name TEXT NOT NULL);"""
     )
+
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS types (
+      id SMALLINT NOT NULL PRIMARY KEY,
+      name TEXT NOT NULL);"""
+    )
+
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS positions (
+      id SMALLINT NOT NULL PRIMARY KEY,
+      name TEXT NOT NULL);"""
+    )
+
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS play_patterns (
+      id SMALLINT NOT NULL PRIMARY KEY,
+      name TEXT NOT NULL);"""
+    ) 
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS events (
       id TEXT NOT NULL PRIMARY KEY,
@@ -106,28 +151,36 @@ class DB:
       minute SMALLINT NOT NULL,
       second SMALLINT NOT NULL,
       type_id SMALLINT NOT NULL,
-      type_name TEXT NOT NULL,
       possession SMALLINT NOT NULL,
-      play_pattern TEXT NOT NULL,
+      play_pattern_id SMALLINT NOT NULL,
       location_x FLOAT,
       location_y FLOAT,
-      position TEXT,
+      position_id SMALLINT,
       duration FLOAT,
       under_pressure BOOL,
       off_camera BOOL,
       out BOOL,
-      tactics TEXT,
       type_metadata TEXT,
       possession_team_id SMALLINT NOT NULL,
       team_id SMALLINT NOT NULL,
       player_id INT,
       match_id INT NOT NULL,
+      FOREIGN KEY (type_id) REFERENCES types(id),
+      FOREIGN KEY (play_pattern_id) REFERENCES play_patterns(id),
+      FOREIGN KEY (position_id) REFERENCES positions(id),
       FOREIGN KEY (possession_team_id) REFERENCES teams(team_id),
       FOREIGN KEY (team_id) REFERENCES teams(team_id),
       FOREIGN KEY (player_id) REFERENCES players(id),
       FOREIGN KEY (match_id) REFERENCES matches(match_id));"""
     )
     
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS tactics (
+      event_id TEXT NOT NULL PRIMARY KEY,
+      formation INT NOT NULL,
+      lineup TEXT NOT NULL,
+      FOREIGN KEY (event_id) REFERENCES events(id));"""
+    )
+
     self.cur.execute("""CREATE TABLE IF NOT EXISTS passes (
       event_id TEXT NOT NULL PRIMARY KEY,
       recipient_id INT,
@@ -206,10 +259,20 @@ class DB:
   def __optimize_tables(self):
     # Create indices on foreign keys
     self.cur.execute("""
+      CREATE INDEX idx_manager_id ON teams(manager_id);
+      
+      CREATE INDEX idx_match_id_lineups ON lineups(match_id);
+      CREATE INDEX idx_team_id_lineups ON lineups(team_id);
+
+      CREATE INDEX idx_event_id_tactics ON tactics(event_id);
+                                                   
       CREATE INDEX idx_competition ON matches(competition_id, season_id);
       CREATE INDEX idx_home_team_id ON matches(home_team_id);
       CREATE INDEX idx_away_team_id ON matches(away_team_id);
 
+      CREATE INDEX idx_type_id ON events(type_id);
+      CREATE INDEX idx_play_pattern_id ON events(play_pattern_id);
+      CREATE INDEX idx_position_id ON events(position_id);
       CREATE INDEX idx_possession_team_id ON events(possession_team_id);
       CREATE INDEX idx_event_team_id ON events(team_id);
       CREATE INDEX idx_player_id ON events(player_id);

@@ -9,13 +9,20 @@ COLS = {
     "competition_international", 
     "season_name"
   ],
+  "managers": [
+      "id",
+      "name",
+      "nickname",
+      "dob",
+      "country"
+  ],
   "teams": [
     "team_id",
     "team_name",
     "team_gender",
     "team_group",
     "country",
-    "managers"
+    "manager_id"
   ],
   "matches": [
     "match_id",
@@ -33,6 +40,7 @@ COLS = {
     "competition_id",
     "season_id"
   ],
+  "lineups": ["match_id", "team_id", "lineup"],
   "events": [
     "id",
     "index",
@@ -41,24 +49,31 @@ COLS = {
     "minute",
     "second",
     "type_id",
-    "type_name",
     "possession",
-    "play_pattern",
+    "play_pattern_id",
     "location_x",
     "location_y",
-    "position",
+    "position_id",
     "duration",
     "under_pressure",
     "off_camera",
     "out",
-    "tactics",
     "type_metadata",
     "possession_team_id",
     "team_id",
     "player_id",
     "match_id"
   ],
+  "tactics": ["event_id", "formation", "lineup"],
+  "types": ["id", "name"],
+  "positions": ["id", "name"],
+  "play_patterns": ["id", "name"],
   "players": ["id", "name"],
+  # "outcomes": ["id", "name"],
+  # "techniques": ["id", "name"],
+  # "body_parts": ["id", "name"],
+  # "cards": ["id", "name"],
+  # "heights": ["id", "name"],
   "passes": [
     "event_id",
     "recipient_id",
