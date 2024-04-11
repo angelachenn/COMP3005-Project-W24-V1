@@ -1,3 +1,4 @@
+from collections import defaultdict
 import json
 from db import DB
 
@@ -85,7 +86,7 @@ class Loader:
           self.db.insert_player(event["player"])
           
         event["match_id"] = match[0]
-        event = self.__parse_event(event)
+        event, type = self.__parse_event(event)
         self.db.insert_event(event)
         
         if "tactics" in event:
@@ -93,34 +94,93 @@ class Loader:
           tactic["event_id"] = event["id"]
           self.db.insert_tactic(tactic)
 
+        event_type = event.get(type, {})
+        event_type["event_id"] = event["id"] 
+        
         match (event["type"]["name"]):
           case "Pass":
-            pass_type = event["pass"]
-            pass_type["event_id"] = event["id"]
-            
-            if "recipient" in pass_type:
-              self.db.insert_player(pass_type["recipient"])
-            
-            pass_type = self.__parse_pass(pass_type)
-            self.db.insert_pass(pass_type)
+            if "recipient" in event_type:
+              self.db.insert_player(event_type["recipient"])
+            self.db.insert_pass(self.__parse_pass(event_type))
             
           case "Shot":
-            shot_type = event["shot"]
-            shot_type["event_id"] = event["id"]
-            shot_type = self.__parse_shot(shot_type)
-            self.db.insert_shot(shot_type)
+            self.db.insert_shot(self.__parse_shot(event_type))
             
           case "Interception":
-            interception_type = event["interception"]
-            interception_type["event_id"] = event["id"]
-            interception_type["outcome_id"], interception_type["outcome_name"] = tuple(interception_type["outcome"].values())
-            self.db.insert_interception(interception_type)
+            event_type["outcome_id"], event_type["outcome_name"] = tuple(event_type["outcome"].values())
+            self.db.insert_interception(event_type)
             
           case "Dribble":
-            dribble_type = event["dribble"]
-            dribble_type["event_id"] = event["id"]
-            dribble_type["outcome_id"], dribble_type["outcome_name"] = tuple(dribble_type["outcome"].values())
-            self.db.insert_dribble(dribble_type)
+            event_type["outcome_id"], event_type["outcome_name"] = tuple(event_type["outcome"].values())
+            self.db.insert_dribble(event_type)
+          
+          case "Half Start":
+            self.db.insert_half_start(event_type)
+            
+          case "Carry":
+            event_type["end_location"] = str(event_type["end_location"])
+            self.db.insert_carry(event_type)
+            
+          case "Ball Recovery":
+            self.db.insert_ball_recovery(event_type)
+            
+          case "Block":
+            self.db.insert_block(event_type)
+            
+          case "Miscontrol":
+            self.db.insert_miscontrol(event_type)
+
+          case "Foul Committed":
+            # TODO: Implement cards
+            if "card" in event_type:
+              event_type["card"] = str(event_type["card"])
+            event_type = self.__parse_type(event_type)
+            self.db.insert_foul_committed(event_type)
+            
+          case "Foul Won":
+            self.db.insert_foul_won(event_type)
+            
+          case "Duel":
+            # TODO: Implement outcome
+            if "outcome" in event_type:
+              event_type["outcome"] = str(event_type["outcome"])
+            event_type = self.__parse_type(event_type)
+            self.db.insert_duel(event_type)
+    
+          case "Clearance":
+            # TODO: Implement body_part
+            event_type["body_part"] = str(event_type["body_part"])
+            self.db.insert_clearance(event_type)
+            
+          case "Injury Stoppage":
+            self.db.insert_injury_stoppage(event_type)
+            
+          case "Bad Behavior":
+            # TODO: Implement card
+            event_type["card"] = str(event_type["card"])
+            self.db.insert_bad_behavior(event_type)
+            
+          case "Substitution":
+            self.db.insert_player(event_type["replacement"])
+              
+            # TODO: Implement outcome
+            event_type["outcome"] = str(event_type["outcome"])
+            event_type["replacement_id"] = event_type["replacement"]["id"]
+            self.db.insert_substitution(event_type)
+            
+          case "Ball Receipt*":
+            # TODO: Implement outcome
+            if "outcome" in event_type:
+              event_type["outcome"] = str(event_type["outcome"])
+            self.db.insert_ball_receipt(event_type)
+            
+          case "50/50":
+            # TODO: Implement outcome
+            event_type["outcome"] = str(event_type["outcome"])
+            self.db.insert_fifty_fifty(event_type)
+            
+          case "Goal Keeper":
+            self.db.insert_goalkeeper(self.__parse_goalkeeper(event_type))
             
           case _:
             pass
@@ -135,36 +195,41 @@ class Loader:
 
     type = event.get("type")
     event["type_id"] = type["id"]
-    self.db.insert_types(type)
+    self.db.insert_type(type)
 
     play_pattern = event.get("play_pattern")
     event["play_pattern_id"] = play_pattern["id"]
-    self.db.insert_play_patterns(play_pattern)
+    self.db.insert_play_pattern(play_pattern)
 
     if "position" in event:
       position = event.get("position")
       event["position_id"] = position["id"]
-      self.db.insert_positions(position)
+      self.db.insert_position(position)
 
     event["possession_team_id"] = event.get("possession_team", {}).get("id")
     event["team_id"] = event.get("team", {}).get("id")
     event["location_x"], event["location_y"] = event.get("location", [None, None])[:2]
     event_type = event.get("type", {}).get("name")
-    type = "goalkeeper" if event_type == "Goalkeeper" else event_type.replace(" ", "_").lower()
+    type = event_type.replace(" ", "_").lower()
     
-    if event["type"]["name"] not in ["Shot", "Pass", "Dribble", "Interception"]:
-      event["type_metadata"] = str(event.get(type) or "")
+    atypical_types = {
+      "Ball Receipt*": "ball_receipt",
+      "Goal Keeper": "goalkeeper",
+      "50/50": "50_50",
+    }
     
-    return event
+    if event_type and event_type in atypical_types:
+      type = atypical_types[event_type]
+    
+    return event, type
   
   def __parse_pass(self, pass_type):
     pass_type["recipient_id"] = pass_type.get("recipient", {}).get("id")
     pass_type["end_location_x"], pass_type["end_location_y"] = pass_type.get("end_location", [None, None])[:2]
     pass_type["pass_cross"] = pass_type.get("cross")
-    pass_type["type_id"], pass_type["type_name"] = tuple(
-      pass_type.get("type", {}).get(key) 
-      for key in ("id", "name")
-    )
+    pass_type = self.__parse_type(pass_type)
+    
+    # TODO: Implement outcome
     pass_type["outcome_id"], pass_type["outcome_name"] = tuple(
       pass_type.get("outcome", {}).get(key) 
       for key in ("id", "name")
@@ -175,14 +240,43 @@ class Loader:
   def __parse_shot(self, shot_type):
     shot_type["xg"] = shot_type["statsbomb_xg"]
     shot_type["end_location_x"], shot_type["end_location_y"] = shot_type.get("end_location", [None, None])[:2] 
-    shot_type["type_id"], shot_type["type_name"] = tuple(
-      shot_type.get("type", {}).get(key) 
-      for key in ("id", "name")
-    )
+    shot_type = self.__parse_type(shot_type)
+    
+    # TODO: Implement outcome
     shot_type["outcome_id"], shot_type["outcome_name"] = tuple(
       shot_type.get("outcome", {}).get(key) 
       for key in ("id", "name")
     )
     
     return shot_type
+  
+  def __parse_goalkeeper(self, goalkeeper):
+    # TODO: Implement outcome
+    if "outcome" in goalkeeper:
+      goalkeeper["outcome"] = str(goalkeeper["outcome"])
+    goalkeeper = self.__parse_position(goalkeeper)
+    # TODO: Implement body part
+    if "body_part" in goalkeeper:
+      goalkeeper["body_part"] = str(goalkeeper["body_part"])
+    # TODO: Implement technique
+    if "technique" in goalkeeper:
+      goalkeeper["technique"] = str(goalkeeper["technique"])
 
+    goalkeeper["type"] = str(goalkeeper["type"]) # Leave this one alone
+    
+    if "end_location" in goalkeeper:
+      goalkeeper["end_location"] = str(goalkeeper["end_location"])
+    
+    return goalkeeper
+  
+  def __parse_type(self, event_type):
+    if "type" in event_type:
+      self.db.insert_type(event_type["type"])
+      event_type["type_id"] = event_type.get("type", {}).get("id") 
+    return event_type
+  
+  def __parse_position(self, event_type):
+    if "position" in event_type:
+      self.db.insert_position(event_type["position"])
+      event_type["position_id"] = event_type["position"]["id"]
+    return event_type

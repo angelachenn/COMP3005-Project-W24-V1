@@ -57,8 +57,9 @@ COLS = {
     "duration",
     "under_pressure",
     "off_camera",
+    "counterpress",
     "out",
-    "type_metadata",
+    "tactics",
     "possession_team_id",
     "team_id",
     "player_id",
@@ -83,7 +84,6 @@ COLS = {
     "end_location_x",
     "end_location_y",
     "type_id",
-    "type_name",
     "body_part",
     "outcome_id",
     "outcome_name",
@@ -112,7 +112,6 @@ COLS = {
     "technique",
     "body_part",
     "type_id",
-    "type_name",
     "outcome_id",
     "outcome_name",
     "freeze_frame",
@@ -137,5 +136,63 @@ COLS = {
     "overrun",
     "nutmeg",
     "no_touch"
+  ],
+  "half_starts": ["event_id", "late_video_start"],
+  "carries": ["event_id", "end_location"],
+  "ball_recoveries": [
+    "event_id", 
+    "recovery_failure", 
+    "offensive"
+  ],
+  "blocks": [
+    "event_id",
+    "deflection",
+    "save_block",
+    "offensive"
+  ],
+  "miscontrols": ["event_id", "aerial_won"],
+  "fouls_committed": [
+    "event_id",
+    "card", 
+    "type_id", 
+    "penalty",
+    "advantage",
+    "offensive"
+  ],
+  "fouls_won": [
+    "event_id",
+    "penalty",
+    "advantage",
+    "defensive"
+  ],
+  "duels": ["event_id", "outcome", "type_id"],
+  "clearances": [
+    "event_id",
+    "left_foot",
+    "body_part",
+    "aerial_won",
+    "head",
+    "right_foot",
+    "other"
+  ],
+  "injury_stoppages": ["event_id", "in_chain"],
+  "bad_behaviors": ["event_id", "card"],
+  "substitutions": ["event_id", "replacement_id", "outcome"],
+  "ball_receipts": ["event_id", "outcome"],
+  "fifty_fifties": ["event_id", "outcome"],
+  "goalkeepers": [
+    "event_id",
+    "outcome",
+    "shot_saved_off_target",
+    "position_id",
+    "body_part",
+    "shot_saved_to_post",
+    "technique",
+    "lost_out",
+    "lost_in_play",
+    "success_in_play",
+    "type",
+    "end_location",
+    "punched_out"
   ]
 }
