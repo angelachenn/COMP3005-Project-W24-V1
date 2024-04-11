@@ -20,6 +20,11 @@ class DB:
   def insert_type(self, val): self.__insert(val, "types", True, "id")
   def insert_position(self, val): self.__insert(val, "positions", True, "id")
   def insert_play_pattern(self, val): self.__insert(val, "play_patterns", True, "id")
+  def insert_outcome(self, val): self.__insert(val, "outcomes", True, "id")
+  def insert_technique(self, val): self.__insert(val, "techniques", True, "id")
+  def insert_body_part(self, val): self.__insert(val, "body_parts", True, "id")
+  def insert_card(self, val): self.__insert(val, "cards", True, "id")
+  def insert_height(self, val): self.__insert(val, "heights", True, "id")
   def insert_tactic(self, val): self.__insert(val, "tactics")
   def insert_pass(self, val): self.__insert(val, "passes")
   def insert_shot(self, val): self.__insert(val, "shots")
@@ -86,6 +91,11 @@ class DB:
     self.cur.execute(f"DROP TABLE IF EXISTS types;")
     self.cur.execute(f"DROP TABLE IF EXISTS play_patterns;")
     self.cur.execute(f"DROP TABLE IF EXISTS positions;")
+    self.cur.execute(f"DROP TABLE IF EXISTS outcomes;")
+    self.cur.execute(f"DROP TABLE IF EXISTS techniques;")
+    self.cur.execute(f"DROP TABLE IF EXISTS body_parts;")
+    self.cur.execute(f"DROP TABLE IF EXISTS cards;")
+    self.cur.execute(f"DROP TABLE IF EXISTS heights;")
     self.cur.execute(f"DROP TABLE IF EXISTS matches;")
     self.cur.execute(f"DROP TABLE IF EXISTS competitions;")
     self.cur.execute(f"DROP TABLE IF EXISTS teams;")
@@ -158,6 +168,31 @@ class DB:
       name TEXT NOT NULL);"""
     )
 
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS heights (
+      id SMALLINT NOT NULL PRIMARY KEY,
+      name TEXT NOT NULL);"""
+    )
+
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS cards (
+      id SMALLINT NOT NULL PRIMARY KEY,
+      name TEXT NOT NULL);"""
+    )
+
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS body_parts (
+      id SMALLINT NOT NULL PRIMARY KEY,
+      name TEXT NOT NULL);"""
+    )
+
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS techniques (
+      id SMALLINT NOT NULL PRIMARY KEY,
+      name TEXT NOT NULL);"""
+    )
+
+    self.cur.execute("""CREATE TABLE IF NOT EXISTS outcomes (
+      id SMALLINT NOT NULL PRIMARY KEY,
+      name TEXT NOT NULL);"""
+    )
+
     self.cur.execute("""CREATE TABLE IF NOT EXISTS types (
       id SMALLINT NOT NULL PRIMARY KEY,
       name TEXT NOT NULL);"""
@@ -191,7 +226,6 @@ class DB:
       off_camera BOOL,
       counterpress BOOL,
       out BOOL,
-      tactics TEXT,
       possession_team_id SMALLINT NOT NULL,
       team_id SMALLINT NOT NULL,
       player_id INT,
@@ -217,16 +251,15 @@ class DB:
       recipient_id INT,
       length FLOAT NOT NULL,
       angle FLOAT NOT NULL,
-      height TEXT NOT NULL,
+      height_id SMALLINT NOT NULL,
       end_location_x FLOAT NOT NULL,
       end_location_y FLOAT NOT NULL,
       type_id SMALLINT,
-      body_part TEXT,
+      body_part_id SMALLINT,
       outcome_id SMALLINT,
-      outcome_name TEXT,
       aerial_won BOOL,
       switch BOOL,
-      technique TEXT,
+      technique_id SMALLINT,
       through_ball BOOL,
       deflected BOOL,
       pass_cross BOOL,
@@ -240,24 +273,28 @@ class DB:
       goal_assist BOOL,
       miscommunication BOOL,
       FOREIGN KEY (event_id) REFERENCES events(id),
+      FOREIGN KEY (height_id) REFERENCES heights(id),
+      FOREIGN KEY (type_id) REFERENCES types(id),
+      FOREIGN KEY (body_part_id) REFERENCES body_parts(id),
+      FOREIGN KEY (technique_id) REFERENCES techniques(id),
       FOREIGN KEY (recipient_id) REFERENCES players(id));"""
     )
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS interceptions (
       event_id TEXT NOT NULL PRIMARY KEY,
       outcome_id SMALLINT NOT NULL,
-      outcome_name TEXT NOT NULL,
-      FOREIGN KEY (event_id) REFERENCES events(id));"""
+      FOREIGN KEY (event_id) REFERENCES events(id),
+      FOREIGN KEY (outcome_id) REFERENCES outcomes(id));"""
     )
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS dribbles (
       event_id TEXT NOT NULL PRIMARY KEY,
       outcome_id SMALLINT NOT NULL,
-      outcome_name TEXT NOT NULL,
       overrun BOOL,
       nutmeg BOOL,
       no_touch BOOL,
-      FOREIGN KEY (event_id) REFERENCES events(id));"""
+      FOREIGN KEY (event_id) REFERENCES events(id),
+      FOREIGN KEY (outcome_id) REFERENCES outcomes(id));"""
     )
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS shots (
@@ -266,11 +303,10 @@ class DB:
       end_location_x FLOAT NOT NULL,
       end_location_y FLOAT NOT NULL,
       key_pass_id TEXT,
-      technique TEXT NOT NULL,
-      body_part TEXT NOT NULL,
+      technique_id SMALLINT NOT NULL,
+      body_part_id SMALLINT NOT NULL,
       type_id SMALLINT NOT NULL,
       outcome_id SMALLINT NOT NULL,
-      outcome_name TEXT NOT NULL,
       freeze_frame TEXT,
       first_time BOOL,
       open_goal BOOL,
@@ -280,7 +316,11 @@ class DB:
       saved_to_post BOOL,
       redirect BOOL,
       follows_dribble BOOL,
-      FOREIGN KEY (event_id) REFERENCES events(id));"""
+      FOREIGN KEY (event_id) REFERENCES events(id),
+      FOREIGN KEY (technique_id) REFERENCES techniques(id),
+      FOREIGN KEY (body_part_id) REFERENCES body_parts(id),
+      FOREIGN KEY (type_id) REFERENCES types(id),
+      FOREIGN KEY (outcome_id) REFERENCES outcomes(id));"""
     )
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS half_starts (
@@ -318,11 +358,12 @@ class DB:
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS fouls_committed (
       event_id TEXT NOT NULL PRIMARY KEY,
-      card TEXT,
+      card_id SMALLINT,
       type_id SMALLINT,
       penalty BOOL,
       advantage BOOL,
       offensive BOOL,
+      FOREIGN KEY (card_id) REFERENCES cards(id),
       FOREIGN KEY (type_id) REFERENCES types(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
@@ -337,20 +378,22 @@ class DB:
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS duels (
       event_id TEXT NOT NULL PRIMARY KEY,
-      outcome TEXT,
+      outcome_id SMALLINT,
       type_id SMALLINT NOT NULL,
+      FOREIGN KEY (outcome_id) REFERENCES outcomes(id),
       FOREIGN KEY (type_id) REFERENCES types(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS clearances (
       event_id TEXT NOT NULL PRIMARY KEY,
-      body_part TEXT NOT NULL,
+      body_part_id SMALLINT NOT NULL,
       aerial_won BOOL,
       left_foot BOOL,
       right_foot BOOL,
       head BOOL,
       other BOOL,
+      FOREIGN KEY (body_part_id) REFERENCES body_parts(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
@@ -362,44 +405,52 @@ class DB:
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS bad_behaviors (
       event_id TEXT NOT NULL PRIMARY KEY,
-      card TEXT NOT NULL,
+      card_id SMALLINT NOT NULL,
+      FOREIGN KEY (card_id) REFERENCES cards(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS substitutions (
       event_id TEXT NOT NULL PRIMARY KEY,
       replacement_id INT NOT NULL,
-      outcome TEXT NOT NULL,
+      outcome_id SMALLINT NOT NULL,
+      FOREIGN KEY (outcome_id) REFERENCES outcomes(id),
       FOREIGN KEY (replacement_id) REFERENCES players(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS ball_receipts (
       event_id TEXT NOT NULL PRIMARY KEY,
-      outcome TEXT,
+      outcome_id SMALLINT,
+      FOREIGN KEY (outcome_id) REFERENCES outcomes(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS fifty_fifties (
       event_id TEXT NOT NULL PRIMARY KEY,
-      outcome TEXT NOT NULL,
+      outcome_id SMALLINT NOT NULL,
+      FOREIGN KEY (outcome_id) REFERENCES outcomes(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS goalkeepers (
       event_id TEXT NOT NULL PRIMARY KEY,
-      outcome TEXT,
+      outcome_id SMALLINT,
       shot_saved_off_target BOOL,
       position_id SMALLINT,
-      body_part TEXT,
+      body_part_id SMALLINT,
       shot_saved_to_post BOOL,
-      technique TEXT,
+      technique_id SMALLINT,
       lost_out BOOL,
       lost_in_play BOOL,
       success_in_play BOOL,
       type TEXT,
       end_location TEXT,
       punched_out BOOL,
+      FOREIGN KEY (outcome_id) REFERENCES outcomes(id),
+      FOREIGN KEY (position_id) REFERENCES positions(id),
+      FOREIGN KEY (body_part_id) REFERENCES body_parts(id),
+      FOREIGN KEY (technique_id) REFERENCES techniques(id),
       FOREIGN KEY (position_id) REFERENCES positions(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
