@@ -17,9 +17,9 @@ class DB:
   def insert_match(self, val): self.__insert(val, "matches")
   def insert_lineup(self, val): self.__insert(val, "lineups")
   def insert_event(self, val): self.__insert(val, "events")
-  def insert_types(self, val): self.__insert(val, "types", True, "id")
-  def insert_positions(self, val): self.__insert(val, "positions", True, "id")
-  def insert_play_patterns(self, val): self.__insert(val, "play_patterns", True, "id")
+  def insert_type(self, val): self.__insert(val, "types", True, "id")
+  def insert_position(self, val): self.__insert(val, "positions", True, "id")
+  def insert_play_pattern(self, val): self.__insert(val, "play_patterns", True, "id")
   def insert_tactic(self, val): self.__insert(val, "tactics")
   def insert_pass(self, val): self.__insert(val, "passes")
   def insert_shot(self, val): self.__insert(val, "shots")
@@ -30,7 +30,7 @@ class DB:
   def insert_ball_recovery(self, val): self.__insert(val, "ball_recoveries")
   def insert_block(self, val): self.__insert(val, "blocks")
   def insert_miscontrol(self, val): self.__insert(val, "miscontrols")
-  def insert_foul_comitted(self, val): self.__insert(val, "fouls_committed")
+  def insert_foul_committed(self, val): self.__insert(val, "fouls_committed")
   def insert_foul_won(self, val): self.__insert(val, "fouls_won")
   def insert_duel(self, val): self.__insert(val, "duels")
   def insert_clearance(self, val): self.__insert(val, "clearances")
@@ -61,6 +61,9 @@ class DB:
     )
 
   def __drop_tables(self):
+    self.cur.execute(f"DROP TABLE IF EXISTS ball_receipts;")
+    self.cur.execute(f"DROP TABLE IF EXISTS goalkeepers;")
+    self.cur.execute(f"DROP TABLE IF EXISTS fifty_fifties;")
     self.cur.execute(f"DROP TABLE IF EXISTS substitutions;")
     self.cur.execute(f"DROP TABLE IF EXISTS bad_behaviors;")
     self.cur.execute(f"DROP TABLE IF EXISTS injury_stoppages;")
@@ -68,8 +71,6 @@ class DB:
     self.cur.execute(f"DROP TABLE IF EXISTS duels;")
     self.cur.execute(f"DROP TABLE IF EXISTS fouls_won;")
     self.cur.execute(f"DROP TABLE IF EXISTS fouls_committed;")
-    self.cur.execute(f"DROP TABLE IF EXISTS foul_wons;")
-    self.cur.execute(f"DROP TABLE IF EXISTS foul_committeds;")
     self.cur.execute(f"DROP TABLE IF EXISTS miscontrols;")
     self.cur.execute(f"DROP TABLE IF EXISTS blocks;")
     self.cur.execute(f"DROP TABLE IF EXISTS ball_recoveries;")
@@ -220,7 +221,6 @@ class DB:
       end_location_x FLOAT NOT NULL,
       end_location_y FLOAT NOT NULL,
       type_id SMALLINT,
-      type_name TEXT,
       body_part TEXT,
       outcome_id SMALLINT,
       outcome_name TEXT,
@@ -269,7 +269,6 @@ class DB:
       technique TEXT NOT NULL,
       body_part TEXT NOT NULL,
       type_id SMALLINT NOT NULL,
-      type_name TEXT NOT NULL,
       outcome_id SMALLINT NOT NULL,
       outcome_name TEXT NOT NULL,
       freeze_frame TEXT,
@@ -319,11 +318,12 @@ class DB:
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS fouls_committed (
       event_id TEXT NOT NULL PRIMARY KEY,
-      card TEXT NOT NULL,
-      type TEXT NOT NULL,
+      card TEXT,
+      type_id SMALLINT,
       penalty BOOL,
       advantage BOOL,
       offensive BOOL,
+      FOREIGN KEY (type_id) REFERENCES types(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
 
@@ -337,8 +337,9 @@ class DB:
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS duels (
       event_id TEXT NOT NULL PRIMARY KEY,
-      outcome TEXT NOT NULL,
-      type TEXT NOT NULL,
+      outcome TEXT,
+      type_id SMALLINT NOT NULL,
+      FOREIGN KEY (type_id) REFERENCES types(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
@@ -375,7 +376,7 @@ class DB:
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS ball_receipts (
       event_id TEXT NOT NULL PRIMARY KEY,
-      outcome TEXT NOT NULL,
+      outcome TEXT,
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
@@ -387,9 +388,9 @@ class DB:
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS goalkeepers (
       event_id TEXT NOT NULL PRIMARY KEY,
-      outcome TEXT NOT NULL,
+      outcome TEXT,
       shot_saved_off_target BOOL,
-      position TEXT,
+      position_id SMALLINT,
       body_part TEXT,
       shot_saved_to_post BOOL,
       technique TEXT,
@@ -399,6 +400,7 @@ class DB:
       type TEXT,
       end_location TEXT,
       punched_out BOOL,
+      FOREIGN KEY (position_id) REFERENCES positions(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     

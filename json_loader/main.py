@@ -10,7 +10,7 @@ if __name__ == '__main__':
     dbname = "project_database", # Mandated by queries.py
     user = "postgres", 
     host= "localhost",
-    password = "password",
+    password = "1234",
     port = 5432
   )
 
