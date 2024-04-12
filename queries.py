@@ -269,7 +269,6 @@ def Q_4(cursor, conn, execution_time):
             JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
             WHERE c.competition_name = 'La Liga' 
             AND c.season_name = '2020/2021'
-            AND p.outcome_id = NULL
             GROUP BY t.team_name
             HAVING COUNT(pass.event_id) >= 1
             ORDER BY passes_made DESC;
@@ -445,6 +444,18 @@ def Q_10(cursor, conn, execution_time):
     # Enter QUERY within the quotes:
     
     query = """
+            SELECT p.name, COUNT(e.id) AS dribbled_past
+            FROM players p
+            JOIN events e ON p.id = e.player_id
+            JOIN types d ON e.type_id = d.id
+            JOIN matches m ON e.match_id = m.match_id
+            JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+            WHERE c.competition_name = 'La Liga' 
+            AND c.season_name = '2020/2021'
+            AND d.name = 'Dribbled Past'
+            GROUP BY p.name
+            HAVING COUNT(e.id) >= 1
+            ORDER BY dribbled_past ASC;
             """
 
     #==========================================================================
@@ -455,6 +466,32 @@ def Q_10(cursor, conn, execution_time):
 
     write_csv(execution_time, cursor, connection, 10)
     return reconnect(cursor, connection)
+
+def B_2(cursor, conn, execution_time):
+    connection = load_database(cursor, conn)
+    cursor = connection.cursor()
+
+    #==========================================================================    
+    # Enter QUERY within the quotes:
+    
+    query = """
+            SELECT t.team_name, COUNT(pass.event_id) AS passes_box
+            FROM teams t
+            JOIN events e ON t.team_id = e.team_id
+            JOIN passes pass ON pass.event_id = e.id
+            JOIN matches m ON e.match_id = m.match_id
+            JOIN competitions c ON m.competition_id = c.competition_id AND m.season_id = c.season_id
+            WHERE c.competition_name = 'La Liga' 
+            AND c.season_name = '2020/2021'
+           	AND pass.outcome_id IS NULL
+			AND pass.end_location_y BETWEEN 18 AND 62
+			AND (pass.end_location_x BETWEEN 0 AND 18 OR pass.end_location_x BETWEEN 102 AND 120)
+            GROUP BY t.team_name
+            HAVING COUNT(pass.event_id) >= 1
+            ORDER BY passes_box DESC;
+            """
+
+    #==========================================================================
 
 # Running the queries from the Q_n methods - Do NOT Modify
 #=====================================================
