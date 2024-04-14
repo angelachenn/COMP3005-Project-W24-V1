@@ -43,20 +43,20 @@ class Loader:
       matches = json.loads(open(f"{self.data_path}/matches/{comp_id}/{season_id}.json").read())
       
       for match in matches:
-        try:
-          home_team_manager = match["home_team"]["managers"][0]
-          away_team_manager = match["away_team"]["managers"][0]
-          self.db.insert_manager(home_team_manager)
-          self.db.insert_manager(away_team_manager)
-        except KeyError:
-          continue
-
         home_team = {k.removeprefix("home_"): v for k, v in match["home_team"].items()}
         away_team = {k.removeprefix("away_"): v for k, v in match["away_team"].items()}
         
-        home_team = self.__parse_team(home_team, home_team_manager["id"])
+        if "managers" in match.get("home_team", {}):
+          home_team_manager = match["home_team"]["managers"][0]
+          self.db.insert_manager(home_team_manager)
+          home_team["manager_id"] = home_team_manager["id"]
+          
+        if "managers" in match.get("away_team", {}):
+          away_team_manager = match["away_team"]["managers"][0]
+          self.db.insert_manager(away_team_manager)
+          away_team["manager_id"] = away_team_manager["id"]
+        
         self.db.insert_team(home_team)
-        away_team = self.__parse_team(away_team, away_team_manager["id"])
         self.db.insert_team(away_team)
 
         match.update(match["home_team"])
@@ -189,8 +189,7 @@ class Loader:
           case _:
             pass
   
-  def __parse_team(self, team, manager_id):
-    team.pop("managers")
+  def __parse_team(self, team, manager_id = None):
     team["manager_id"] = manager_id
     return team
   
@@ -256,7 +255,7 @@ class Loader:
 
   def __parse_shot(self, shot_type):
     shot_type["xg"] = shot_type["statsbomb_xg"]
-    shot_type["end_location_x"], shot_type["end_location_y"] = shot_type.get("end_location", [None, None])[:2] 
+    shot_type["end_location_x"], shot_type["end_location_y"], shot_type["end_location_z"] = (shot_type.get("end_location", []) + [None, None, None])[:3]
     shot_type = self.__parse_type(shot_type)
     
     self.db.insert_technique(shot_type["technique"])

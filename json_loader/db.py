@@ -52,11 +52,12 @@ class DB:
   
   # Private methods
   def __insert(self, val, type, conflict=False, conflict_id=None):
-    query = f"""INSERT INTO {type} ({', '.join(COLS[type])}) 
-              VALUES ({', '.join(['%s'] * len(COLS[type]))}) 
+    non_null_cols = [col for col in COLS[type] if col in val and val[col] != None]
+    query = f"""INSERT INTO {type} ({', '.join(non_null_cols)}) 
+              VALUES ({', '.join(['%s'] * len(non_null_cols))}) 
               {f"ON CONFLICT ({conflict_id}) DO NOTHING" if conflict else ""};
             """
-    self.cur.execute(query, self.__format_entry(val, COLS[type]))
+    self.cur.execute(query, self.__format_entry(val, non_null_cols))
     self.conn.commit()
     
   def __format_entry(self, data, cols):
@@ -120,7 +121,7 @@ class DB:
       id SMALLINT NOT NULL PRIMARY KEY,
       name TEXT NOT NULL,
       nickname TEXT,
-      dob DATE,
+      dob DATE NOT NULL,
       country TEXT NOT NULL);"""
     )
 
@@ -218,14 +219,14 @@ class DB:
       type_id SMALLINT NOT NULL,
       possession SMALLINT NOT NULL,
       play_pattern_id SMALLINT NOT NULL,
-      location_x FLOAT,
-      location_y FLOAT,
+      location_x FLOAT NOT NULL DEFAULT 0.0,
+      location_y FLOAT NOT NULL DEFAULT 0.0,
       position_id SMALLINT,
-      duration FLOAT,
-      under_pressure BOOL,
-      off_camera BOOL,
-      counterpress BOOL,
-      out BOOL,
+      duration FLOAT NOT NULL DEFAULT 0.0,
+      under_pressure BOOL NOT NULL DEFAULT FALSE,
+      off_camera BOOL NOT NULL DEFAULT FALSE,
+      counterpress BOOL NOT NULL DEFAULT FALSE,
+      out BOOL NOT NULL DEFAULT FALSE,
       possession_team_id SMALLINT NOT NULL,
       team_id SMALLINT NOT NULL,
       player_id INT,
@@ -257,21 +258,21 @@ class DB:
       type_id SMALLINT,
       body_part_id SMALLINT,
       outcome_id SMALLINT,
-      aerial_won BOOL,
-      switch BOOL,
+      aerial_won BOOL NOT NULL DEFAULT FALSE,
+      switch BOOL NOT NULL DEFAULT FALSE,
       technique_id SMALLINT,
-      through_ball BOOL,
-      deflected BOOL,
-      pass_cross BOOL,
-      outswinging BOOL,
+      through_ball BOOL NOT NULL DEFAULT FALSE,
+      deflected BOOL NOT NULL DEFAULT FALSE,
+      pass_cross BOOL NOT NULL DEFAULT FALSE,
+      outswinging BOOL NOT NULL DEFAULT FALSE,
       assisted_shot_id TEXT,
-      shot_assist BOOL,
-      no_touch BOOL,
-      cut_back BOOL,
-      inswinging BOOL,
-      straight BOOL,
-      goal_assist BOOL,
-      miscommunication BOOL,
+      shot_assist BOOL NOT NULL DEFAULT FALSE,
+      no_touch BOOL NOT NULL DEFAULT FALSE,
+      cut_back BOOL NOT NULL DEFAULT FALSE,
+      inswinging BOOL NOT NULL DEFAULT FALSE,
+      straight BOOL NOT NULL DEFAULT FALSE,
+      goal_assist BOOL NOT NULL DEFAULT FALSE,
+      miscommunication BOOL NOT NULL DEFAULT FALSE,
       FOREIGN KEY (event_id) REFERENCES events(id),
       FOREIGN KEY (height_id) REFERENCES heights(id),
       FOREIGN KEY (type_id) REFERENCES types(id),
@@ -290,9 +291,9 @@ class DB:
     self.cur.execute("""CREATE TABLE IF NOT EXISTS dribbles (
       event_id TEXT NOT NULL PRIMARY KEY,
       outcome_id SMALLINT NOT NULL,
-      overrun BOOL,
-      nutmeg BOOL,
-      no_touch BOOL,
+      overrun BOOL NOT NULL DEFAULT FALSE,
+      nutmeg BOOL NOT NULL DEFAULT FALSE,
+      no_touch BOOL NOT NULL DEFAULT FALSE,
       FOREIGN KEY (event_id) REFERENCES events(id),
       FOREIGN KEY (outcome_id) REFERENCES outcomes(id));"""
     )
@@ -302,20 +303,21 @@ class DB:
       xg FLOAT NOT NULL,
       end_location_x FLOAT NOT NULL,
       end_location_y FLOAT NOT NULL,
+      end_location_z FLOAT NOT NULL DEFAULT 0.0,
       key_pass_id TEXT,
       technique_id SMALLINT NOT NULL,
       body_part_id SMALLINT NOT NULL,
       type_id SMALLINT NOT NULL,
       outcome_id SMALLINT NOT NULL,
       freeze_frame TEXT,
-      first_time BOOL,
-      open_goal BOOL,
-      aerial_won BOOL,
-      deflected BOOL,
-      saved_off_target BOOL,
-      saved_to_post BOOL,
-      redirect BOOL,
-      follows_dribble BOOL,
+      first_time BOOL NOT NULL DEFAULT FALSE,
+      open_goal BOOL NOT NULL DEFAULT FALSE,
+      aerial_won BOOL NOT NULL DEFAULT FALSE,
+      deflected BOOL NOT NULL DEFAULT FALSE,
+      saved_off_target BOOL NOT NULL DEFAULT FALSE,
+      saved_to_post BOOL NOT NULL DEFAULT FALSE,
+      redirect BOOL NOT NULL DEFAULT FALSE,
+      follows_dribble BOOL NOT NULL DEFAULT FALSE,
       FOREIGN KEY (event_id) REFERENCES events(id),
       FOREIGN KEY (technique_id) REFERENCES techniques(id),
       FOREIGN KEY (body_part_id) REFERENCES body_parts(id),
@@ -325,7 +327,7 @@ class DB:
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS half_starts (
       event_id TEXT NOT NULL PRIMARY KEY,
-      late_video_start BOOL,
+      late_video_start BOOL NOT NULL DEFAULT FALSE,
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
@@ -337,22 +339,22 @@ class DB:
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS ball_recoveries (
       event_id TEXT NOT NULL PRIMARY KEY,
-      offensive BOOL,
-      recovery_failure BOOL,
+      offensive BOOL NOT NULL DEFAULT FALSE,
+      recovery_failure BOOL NOT NULL DEFAULT FALSE,
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS blocks (
       event_id TEXT NOT NULL PRIMARY KEY,
-      deflection BOOL,
-      save_block BOOL,
-      offensive BOOL,
+      deflection BOOL NOT NULL DEFAULT FALSE,
+      save_block BOOL NOT NULL DEFAULT FALSE,
+      offensive BOOL NOT NULL DEFAULT FALSE,
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS miscontrols (
       event_id TEXT NOT NULL PRIMARY KEY,
-      aerial_won BOOL,
+      aerial_won BOOL NOT NULL DEFAULT FALSE,
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
@@ -360,9 +362,9 @@ class DB:
       event_id TEXT NOT NULL PRIMARY KEY,
       card_id SMALLINT,
       type_id SMALLINT,
-      penalty BOOL,
-      advantage BOOL,
-      offensive BOOL,
+      penalty BOOL NOT NULL DEFAULT FALSE,
+      advantage BOOL NOT NULL DEFAULT FALSE,
+      offensive BOOL NOT NULL DEFAULT FALSE,
       FOREIGN KEY (card_id) REFERENCES cards(id),
       FOREIGN KEY (type_id) REFERENCES types(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
@@ -370,9 +372,9 @@ class DB:
 
     self.cur.execute("""CREATE TABLE IF NOT EXISTS fouls_won (
       event_id TEXT NOT NULL PRIMARY KEY,
-      penalty BOOL,
-      advantage BOOL,
-      defensive BOOL,
+      penalty BOOL NOT NULL DEFAULT FALSE,
+      advantage BOOL NOT NULL DEFAULT FALSE,
+      defensive BOOL NOT NULL DEFAULT FALSE,
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
@@ -388,18 +390,18 @@ class DB:
     self.cur.execute("""CREATE TABLE IF NOT EXISTS clearances (
       event_id TEXT NOT NULL PRIMARY KEY,
       body_part_id SMALLINT NOT NULL,
-      aerial_won BOOL,
-      left_foot BOOL,
-      right_foot BOOL,
-      head BOOL,
-      other BOOL,
+      aerial_won BOOL NOT NULL DEFAULT FALSE,
+      left_foot BOOL NOT NULL DEFAULT FALSE,
+      right_foot BOOL NOT NULL DEFAULT FALSE,
+      head BOOL NOT NULL DEFAULT FALSE,
+      other BOOL NOT NULL DEFAULT FALSE,
       FOREIGN KEY (body_part_id) REFERENCES body_parts(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
     self.cur.execute("""CREATE TABLE IF NOT EXISTS injury_stoppages (
       event_id TEXT NOT NULL PRIMARY KEY,
-      in_chain BOOL,
+      in_chain BOOL NOT NULL DEFAULT FALSE,
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
@@ -436,22 +438,21 @@ class DB:
     self.cur.execute("""CREATE TABLE IF NOT EXISTS goalkeepers (
       event_id TEXT NOT NULL PRIMARY KEY,
       outcome_id SMALLINT,
-      shot_saved_off_target BOOL,
+      shot_saved_off_target BOOL NOT NULL DEFAULT FALSE,
       position_id SMALLINT,
       body_part_id SMALLINT,
-      shot_saved_to_post BOOL,
+      shot_saved_to_post BOOL NOT NULL DEFAULT FALSE,
       technique_id SMALLINT,
-      lost_out BOOL,
-      lost_in_play BOOL,
-      success_in_play BOOL,
-      type TEXT,
+      lost_out BOOL NOT NULL DEFAULT FALSE,
+      lost_in_play BOOL NOT NULL DEFAULT FALSE,
+      success_in_play BOOL NOT NULL DEFAULT FALSE,
+      type TEXT NOT NULL,
       end_location TEXT,
-      punched_out BOOL,
+      punched_out BOOL NOT NULL DEFAULT FALSE,
       FOREIGN KEY (outcome_id) REFERENCES outcomes(id),
       FOREIGN KEY (position_id) REFERENCES positions(id),
       FOREIGN KEY (body_part_id) REFERENCES body_parts(id),
       FOREIGN KEY (technique_id) REFERENCES techniques(id),
-      FOREIGN KEY (position_id) REFERENCES positions(id),
       FOREIGN KEY (event_id) REFERENCES events(id));"""
     )
     
@@ -460,31 +461,104 @@ class DB:
   def __optimize_tables(self):
     # Create indices on foreign keys
     self.cur.execute("""
-      CREATE INDEX idx_manager_id ON teams(manager_id);
+      CREATE INDEX fk_teams_managers ON teams(manager_id);
       
-      CREATE INDEX idx_match_id_lineups ON lineups(match_id);
-      CREATE INDEX idx_team_id_lineups ON lineups(team_id);
+      CREATE INDEX fk_lineups_matches ON lineups(match_id);
+      CREATE INDEX fk_lineups_teams ON lineups(team_id);
 
-      CREATE INDEX idx_event_id_tactics ON tactics(event_id);
+      CREATE INDEX fk_tactics_events ON tactics(event_id);
 
-      CREATE INDEX idx_competition ON matches(competition_id, season_id);
-      CREATE INDEX idx_home_team_id ON matches(home_team_id);
-      CREATE INDEX idx_away_team_id ON matches(away_team_id);
+      CREATE INDEX fk_matches_competitions ON matches(competition_id, season_id);
+      CREATE INDEX fk_matches_home_teams ON matches(home_team_id);
+      CREATE INDEX fk_matches_away_teams ON matches(away_team_id);
 
-      CREATE INDEX idx_type_id ON events(type_id);
-      CREATE INDEX idx_play_pattern_id ON events(play_pattern_id);
-      CREATE INDEX idx_position_id ON events(position_id);
-      CREATE INDEX idx_possession_team_id ON events(possession_team_id);
-      CREATE INDEX idx_event_team_id ON events(team_id);
-      CREATE INDEX idx_player_id ON events(player_id);
-      CREATE INDEX idx_match_id ON events(match_id);
+      CREATE INDEX fk_events_types ON events(type_id);
+      CREATE INDEX fk_events_play_patterns ON events(play_pattern_id);
+      CREATE INDEX fk_events_positions ON events(position_id);
+      CREATE INDEX fk_events_possession_teams ON events(possession_team_id);
+      CREATE INDEX fk_events_teams ON events(team_id);
+      CREATE INDEX fk_events_players ON events(player_id);
+      CREATE INDEX fk_events_matches ON events(match_id);
 
-      CREATE INDEX idx_recipient_id ON passes(recipient_id);
-      CREATE INDEX idx_event_id_passes ON passes(event_id);
+      CREATE INDEX fk_passes_recipients ON passes(recipient_id);
+      CREATE INDEX fk_passes_events ON passes(event_id);
+      CREATE INDEX fk_passes_heights ON passes(height_id);
+      CREATE INDEX fk_passes_types ON passes(type_id);
+      CREATE INDEX fk_passes_body_parts ON passes(body_part_id);
+      CREATE INDEX fk_passes_techniques ON passes(technique_id);
 
-      CREATE INDEX idx_event_id_interceptions ON interceptions(event_id);
-      CREATE INDEX idx_event_id_dribbles ON dribbles(event_id);
-      CREATE INDEX idx_event_id_shots ON shots(event_id);
+      CREATE INDEX fk_interceptions_events ON interceptions(event_id);
+      CREATE INDEX fk_interceptions_outcomes ON interceptions(outcome_id);
+      
+      CREATE INDEX fk_dribbles_events ON dribbles(event_id);
+      CREATE INDEX fk_dribbles_outcomes ON dribbles(outcome_id);
+      
+      CREATE INDEX fk_shots_events ON shots(event_id);
+      CREATE INDEX fk_shots_techniques ON shots(technique_id);
+      CREATE INDEX fk_shots_body_parts ON shots(body_part_id);
+      CREATE INDEX fk_shots_types ON shots(type_id);
+      CREATE INDEX fk_shots_outcomes ON shots(outcome_id);
+      
+      CREATE INDEX fk_fouls_committed_events ON fouls_committed(event_id);
+      CREATE INDEX fk_fouls_committed_cards ON fouls_committed(card_id);
+      CREATE INDEX fk_fouls_committed_types ON fouls_committed(type_id);
+      
+      CREATE INDEX fk_fouls_won_events ON fouls_won(event_id);
+      
+      CREATE INDEX fk_duels_events ON duels(event_id);
+      CREATE INDEX fk_duels_outcomes ON duels(outcome_id);
+      CREATE INDEX fk_duels_types ON duels(type_id);
+      
+      CREATE INDEX fk_clearances_events ON clearances(event_id);
+      CREATE INDEX fk_clearances_body_parts ON clearances(body_part_id);
+      
+      CREATE INDEX fk_bad_behaviors_events ON bad_behaviors(event_id);
+      CREATE INDEX fk_bad_behaviors_cards ON bad_behaviors(card_id);
+      
+      CREATE INDEX fk_substitutions_events ON substitutions(event_id);
+      CREATE INDEX fk_substitutions_outcomes ON substitutions(outcome_id);
+      CREATE INDEX fk_substitutions_replacements ON substitutions(replacement_id);
+      
+      CREATE INDEX fk_ball_receipts_events ON ball_receipts(event_id);
+      CREATE INDEX fk_ball_receipts_outcomes ON ball_receipts(outcome_id);
+      
+      CREATE INDEX fk_fifty_fifties_events ON fifty_fifties(event_id);
+      CREATE INDEX fk_fifty_fifties_outcomes ON fifty_fifties(outcome_id);
+      
+      CREATE INDEX fk_goalkeepers_events ON goalkeepers(event_id);
+      CREATE INDEX fk_goalkeepers_outcomes ON goalkeepers(outcome_id);
+      CREATE INDEX fk_goalkeepers_body_parts ON goalkeepers(body_part_id);
+      CREATE INDEX fk_goalkeepers_techniques ON goalkeepers(technique_id);
+      CREATE INDEX fk_goalkeepers_positions ON goalkeepers(position_id);
+      
+      CREATE INDEX fk_half_starts_events ON half_starts(event_id);
+      CREATE INDEX fk_carries_events ON carries(event_id);
+      CREATE INDEX fk_ball_recoveries_events ON ball_recoveries(event_id);
+      CREATE INDEX fk_blocks_events ON blocks(event_id);
+      CREATE INDEX fk_miscontrols_events ON miscontrols(event_id);
+      CREATE INDEX fk_injury_stoppages_events ON injury_stoppages(event_id);
+      """)
+    
+    # Create other indices
+    self.cur.execute("""
+      -- General
+      CREATE INDEX idx_competitions_comeptition_name ON competitions(competition_name);
+      CREATE INDEX idx_competitions_season_name ON competitions(season_name);
+      
+      CREATE INDEX idx_players_name ON players(name);
+      
+      -- Q1
+      CREATE INDEX idx_shots_xg ON shots(xg);
+      
+      -- Q3
+      CREATE INDEX idx_shots_first_time_true_only ON shots(first_time) WHERE first_time = TRUE;
+      
+      -- Q4
+      CREATE INDEX idx_teams_team_name ON teams(team_name);
+      
+      -- Q7 & Q8
+      CREATE INDEX idx_passes_through_ball_true_only ON passes(through_ball) WHERE through_ball = TRUE;
+      
       """)
     
     self.conn.commit()
