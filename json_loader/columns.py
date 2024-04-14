@@ -106,6 +106,7 @@ COLS = {
     "xg",
     "end_location_x",
     "end_location_y",
+    "end_location_z",
     "key_pass_id",
     "technique_id",
     "body_part_id",
